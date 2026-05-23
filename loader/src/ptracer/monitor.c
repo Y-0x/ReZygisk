@@ -137,11 +137,11 @@ void monitor_events_loop() {
 
       ((monitor_event_callback_t)events[i].data.ptr)();
 
-      if (!monitor_events_running) break;
+      if (!monitor_events_running) { break; }
     }
   }
 
-  if (monitor_epoll_fd >= 0) close(monitor_epoll_fd);
+  if (monitor_epoll_fd >= 0) { close(monitor_epoll_fd); }
   monitor_epoll_fd = -1;
 }
 
@@ -396,30 +396,28 @@ void rezygiskd_listener_callback() {
 }
 
 void rezygiskd_listener_stop() {
-  if (monitor_sock_fd >= 0) close(monitor_sock_fd);
+  if (monitor_sock_fd >= 0) { close(monitor_sock_fd); }
   monitor_sock_fd = -1;
 }
 
 #define MAX_RETRY_COUNT 5
 
-#define CREATE_ZYGOTE_START_COUNTER(abi)             \
-  struct timespec last_zygote##abi = {               \
-    .tv_sec = 0,                                     \
-    .tv_nsec = 0                                     \
-  };                                                 \
-                                                     \
-  int count_zygote ## abi = 0;                       \
-  bool should_stop_inject ## abi() {                 \
-    struct timespec now = {};                        \
-    clock_gettime(CLOCK_MONOTONIC, &now);            \
-    if (now.tv_sec - last_zygote ## abi.tv_sec < 30) \
-      count_zygote ## abi++;                         \
-    else                                             \
-      count_zygote ## abi = 0;                       \
-                                                     \
-    last_zygote##abi = now;                          \
-                                                     \
-    return count_zygote##abi >= MAX_RETRY_COUNT;     \
+#define CREATE_ZYGOTE_START_COUNTER(abi)                                        \
+  struct timespec last_zygote##abi = {                                          \
+    .tv_sec = 0,                                                                \
+    .tv_nsec = 0                                                                \
+  };                                                                            \
+                                                                                \
+  int count_zygote ## abi = 0;                                                  \
+  bool should_stop_inject ## abi() {                                            \
+    struct timespec now = {};                                                   \
+    clock_gettime(CLOCK_MONOTONIC, &now);                                       \
+    if (now.tv_sec - last_zygote ## abi.tv_sec < 30) { count_zygote ## abi++; } \
+    else { count_zygote ## abi = 0; }                                           \
+                                                                                \
+    last_zygote##abi = now;                                                     \
+                                                                                \
+    return count_zygote##abi >= MAX_RETRY_COUNT;                                \
   }
 
 CREATE_ZYGOTE_START_COUNTER(64)
@@ -610,7 +608,7 @@ void sigchld_listener_callback() {
     int pid;
     while ((pid = waitpid(-1, &sigchld_status, __WALL | WNOHANG)) != 0) {
       if (pid == -1) {
-        if (tracing_state == STOPPED && errno == ECHILD) break;
+        if (tracing_state == STOPPED && errno == ECHILD) { break; }
         PLOGE("waitpid");
       }
 
@@ -622,7 +620,7 @@ void sigchld_listener_callback() {
 
           LOGV("forked %ld", child_pid);
         } else if (STOPPED_WITH(SIGTRAP, PTRACE_EVENT_STOP) && tracing_state == STOPPING) {
-          if (ptrace(PTRACE_DETACH, 1, 0, 0) == -1) PLOGE("failed to detach init");
+          if (ptrace(PTRACE_DETACH, 1, 0, 0) == -1) { PLOGE("failed to detach init"); }
 
           tracing_state = STOPPED;
 
@@ -655,7 +653,7 @@ void sigchld_listener_callback() {
 
       pid_t state = 0;
       for (size_t i = 0; i < sigchld_process_count; i++) {
-        if (sigchld_process[i] != pid) continue;
+        if (sigchld_process[i] != pid) { continue; }
 
         state = sigchld_process[i];
 
@@ -666,7 +664,7 @@ void sigchld_listener_callback() {
         LOGV("new process %d attached", pid);
 
         for (size_t i = 0; i < sigchld_process_count; i++) {
-          if (sigchld_process[i] != 0) continue;
+          if (sigchld_process[i] != 0) { continue; }
 
           sigchld_process[i] = pid;
 
@@ -753,17 +751,12 @@ void sigchld_listener_callback() {
 
                   /* INFO: Only restart companions if it's not the first time */
                   if ((strcmp(program, APP_PROCESS_64) == 0 && count_zygote64 > 1) || ((strcmp(program, APP_PROCESS_32) == 0 || is_tango) && count_zygote32 > 1)) {
-                    if (is_tango) {
-                      execl(tracer, basename(tracer), "trace", pid_str, "--restart", "--tango", NULL);
-                    } else {
-                      execl(tracer, basename(tracer), "trace", pid_str, "--restart", NULL);
-                    }
-                  } else {
-                    if (is_tango) {
-                      execl(tracer, basename(tracer), "trace", pid_str, "--tango", NULL);
-                    } else {
-                      execl(tracer, basename(tracer), "trace", pid_str, NULL);
-                    }
+                    if (is_tango) { execl(tracer, basename(tracer), "trace", pid_str, "--restart", "--tango", NULL); }
+                    else { execl(tracer, basename(tracer), "trace", pid_str, "--restart", NULL); }
+                  }
+                  else {
+                    if (is_tango) { execl(tracer, basename(tracer), "trace", pid_str, "--tango", NULL); }
+                    else { execl(tracer, basename(tracer), "trace", pid_str, NULL); }
                   }
 
                   PLOGE("failed to exec, kill");
@@ -889,13 +882,11 @@ static bool update_status(const char *message) {
 
     fprintf(json, "  \"monitor\": {\n");
     fprintf(json, "    \"state\": \"%d\"", tracing_state);
-    if (monitor_stop_reason) fprintf(json, ",\n    \"reason\": \"%s\",\n", monitor_stop_reason);
-    else fprintf(json, "\n");
+    if (monitor_stop_reason) { fprintf(json, ",\n    \"reason\": \"%s\",\n", monitor_stop_reason); }
+    else { fprintf(json, "\n"); }
 
-    if (status64.supported || status32.supported)
-      fprintf(json, "  },\n");
-    else
-      fprintf(json, "  }\n");
+    if (status64.supported || status32.supported) { fprintf(json, "  },\n"); }
+    else { fprintf(json, "  }\n"); }
 
 
     if (status64.supported || status32.supported) {
@@ -903,28 +894,28 @@ static bool update_status(const char *message) {
       if (status64.supported) {
         fprintf(json, "    \"64\": {\n");
         fprintf(json, "      \"state\": %d,\n", status64.daemon_running);
-        if (status64.daemon_error_info) fprintf(json, "      \"reason\": \"%s\",\n", status64.daemon_error_info);
+        if (status64.daemon_error_info) { fprintf(json, "      \"reason\": \"%s\",\n", status64.daemon_error_info); }
         fprintf(json, "      \"modules\": [");
 
         if (environment_information64.modules) for (uint32_t i = 0; i < environment_information64.modules_len; i++) {
-          if (i > 0) fprintf(json, ", ");
+          if (i > 0) { fprintf(json, ", "); }
           fprintf(json, "\"%s\"", environment_information64.modules[i]);
         }
 
         fprintf(json, "]\n");
         fprintf(json, "    }");
-        if (status32.supported) fprintf(json, ",\n");
-        else fprintf(json, "\n");
+        if (status32.supported) { fprintf(json, ",\n"); }
+        else { fprintf(json, "\n"); }
       }
 
       if (status32.supported) {
         fprintf(json, "    \"32\": {\n");
         fprintf(json, "      \"state\": %d,\n", status32.daemon_running);
-        if (status32.daemon_error_info) fprintf(json, "      \"reason\": \"%s\",\n", status32.daemon_error_info);
+        if (status32.daemon_error_info) { fprintf(json, "      \"reason\": \"%s\",\n", status32.daemon_error_info); }
         fprintf(json, "      \"modules\": [");
 
         if (environment_information32.modules) for (uint32_t i = 0; i < environment_information32.modules_len; i++) {
-          if (i > 0) fprintf(json, ", ");
+          if (i > 0) { fprintf(json, ", "); }
           fprintf(json, "\"%s\"", environment_information32.modules[i]);
         }
 
@@ -937,12 +928,10 @@ static bool update_status(const char *message) {
       fprintf(json, "  \"zygote\": {\n");
       if (status64.supported) {
         fprintf(json, "    \"64\": %d", status64.zygote_injected);
-        if (status32.supported && status32.zygote_injected) fprintf(json, ",\n");
+        if (status32.supported && status32.zygote_injected) { fprintf(json, ",\n"); }
         else fprintf(json, "\n");
       }
-      if (status32.supported && status32.zygote_injected) {
-        fprintf(json, "    \"32\": %d\n", status32.zygote_injected);
-      }
+      if (status32.supported && status32.zygote_injected) { fprintf(json, "    \"32\": %d\n", status32.zygote_injected); }
       fprintf(json, "  }\n");
     }
 
@@ -950,9 +939,7 @@ static bool update_status(const char *message) {
 
     fclose(json);
   } else {
-    if (remove("/data/adb/rezygisk/state.json") == -1) {
-      PLOGE("failed to remove state.json");
-    }
+    if (remove("/data/adb/rezygisk/state.json") == -1) { PLOGE("failed to remove state.json"); }
   }
 
   LOGI("status updated: %s", status_text);
@@ -980,8 +967,8 @@ static bool prepare_environment() {
       continue;
     }
 
-    if (after_description) strcat(post_section, line);
-    else strcat(pre_section, line);
+    if (after_description) { strcat(post_section, line); }
+    else { strcat(pre_section, line); }
   }
 
   fclose(orig_prop);
@@ -992,9 +979,7 @@ static bool prepare_environment() {
 void init_monitor() {
   LOGI("ReZygisk %s", ZKSU_VERSION);
 
-  if (!prepare_environment()) exit(1);
-
-  if (!claim_init_tracer()) exit(1);
+  if (!prepare_environment() || !claim_init_tracer()) { exit(1); }
 
   monitor_events_init();
 
@@ -1026,12 +1011,12 @@ void init_monitor() {
   rezygiskd_listener_stop();
   sigchld_listener_stop();
 
-  if (status64.daemon_info) free(status64.daemon_info);
-  if (status64.daemon_error_info) free(status64.daemon_error_info);
-  if (status32.daemon_info) free(status32.daemon_info);
-  if (status32.daemon_error_info) free(status32.daemon_error_info);
+  if (status64.daemon_info) { free(status64.daemon_info); }
+  if (status64.daemon_error_info) { free(status64.daemon_error_info); }
+  if (status32.daemon_info) { free(status32.daemon_info); }
+  if (status32.daemon_error_info) { free(status32.daemon_error_info); }
 
-  if (environment_information64.root_impl) free((void *)environment_information64.root_impl);
+  if (environment_information64.root_impl) { free((void *)environment_information64.root_impl); }
   if (environment_information64.modules) {
     for (uint32_t i = 0; i < environment_information64.modules_len; i++) {
       free((void *)environment_information64.modules[i]);
@@ -1039,7 +1024,7 @@ void init_monitor() {
     free((void *)environment_information64.modules);
   }
 
-  if (environment_information32.root_impl) free((void *)environment_information32.root_impl);
+  if (environment_information32.root_impl) { free((void *)environment_information32.root_impl); }
   if (environment_information32.modules) {
     for (uint32_t i = 0; i < environment_information32.modules_len; i++) {
       free((void *)environment_information32.modules[i]);
